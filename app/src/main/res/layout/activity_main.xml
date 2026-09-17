@@ -1,205 +1,46 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/bg">
+    android:orientation="vertical"
+    android:background="@color/bg"
+    android:gravity="center"
+    android:padding="32dp">
 
-    <LinearLayout
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Screenshot OCR"
+        android:textSize="28sp"
+        android:textStyle="bold"
+        android:textColor="@color/primary" />
+
+    <TextView
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:orientation="vertical">
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:gravity="center"
+        android:text="Detects all text on your image.\nTap any highlighted line to copy it.\nJust like Google Lens."
+        android:textSize="14sp"
+        android:textColor="@color/textSecondary" />
 
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:background="@color/primary"
-            android:paddingStart="20dp"
-            android:paddingEnd="20dp"
-            android:paddingTop="18dp"
-            android:paddingBottom="18dp">
+    <Button
+        android:id="@+id/pickBtn"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="32dp"
+        android:backgroundTint="@color/primary"
+        android:textColor="#FFFFFF"
+        android:paddingVertical="14dp"
+        android:text="Choose Image" />
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Screenshot OCR"
-                android:textColor="#FFFFFF"
-                android:textSize="22sp"
-                android:textStyle="bold" />
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        android:gravity="center"
+        android:text="Tip: you can also share any image to this app from Gallery."
+        android:textSize="12sp"
+        android:textColor="@color/textSecondary" />
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Crop, scan, and extract text instantly"
-                android:textColor="#CCFFFFFF"
-                android:textSize="13sp"
-                android:layout_marginTop="4dp" />
-        </LinearLayout>
-
-        <ScrollView
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:fillViewport="true">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="16dp">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:background="@drawable/card_bg"
-                    android:padding="12dp">
-
-                    <FrameLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="260dp"
-                        android:background="#111111">
-
-                        <ImageView
-                            android:id="@+id/preview"
-                            android:layout_width="match_parent"
-                            android:layout_height="match_parent"
-                            android:scaleType="fitCenter"
-                            android:contentDescription="Preview" />
-
-                        <TextView
-                            android:id="@+id/emptyHint"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_gravity="center"
-                            android:text="No image selected\nTap below to pick"
-                            android:textColor="#AAAAAA"
-                            android:textSize="14sp"
-                            android:gravity="center" />
-                    </FrameLayout>
-                </LinearLayout>
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:layout_marginTop="12dp">
-
-                    <Button
-                        android:id="@+id/pickBtn"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:backgroundTint="@color/primary"
-                        android:textColor="#FFFFFF"
-                        android:text="Pick Image" />
-
-                    <Button
-                        android:id="@+id/scanAllBtn"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:layout_marginStart="8dp"
-                        android:backgroundTint="@color/accent"
-                        android:textColor="#FFFFFF"
-                        android:text="Crop Again"
-                        android:enabled="false" />
-                </LinearLayout>
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:layout_marginTop="14dp">
-
-                    <ProgressBar
-                        android:id="@+id/progress"
-                        android:layout_width="20dp"
-                        android:layout_height="20dp"
-                        android:visibility="gone" />
-
-                    <TextView
-                        android:id="@+id/status"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:layout_marginStart="8dp"
-                        android:text="Ready"
-                        android:textColor="@color/textSecondary"
-                        android:textSize="12sp" />
-                </LinearLayout>
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:background="@drawable/card_bg"
-                    android:padding="14dp"
-                    android:layout_marginTop="14dp">
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical">
-
-                        <TextView
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:text="Extracted Text"
-                            android:textColor="@color/textPrimary"
-                            android:textSize="15sp"
-                            android:textStyle="bold" />
-
-                        <ImageButton
-                            android:id="@+id/copyBtn"
-                            android:layout_width="40dp"
-                            android:layout_height="40dp"
-                            android:background="?android:attr/selectableItemBackgroundBorderless"
-                            android:src="@android:drawable/ic_menu_edit"
-                            android:contentDescription="Copy" />
-
-                        <ImageButton
-                            android:id="@+id/shareBtn"
-                            android:layout_width="40dp"
-                            android:layout_height="40dp"
-                            android:background="?android:attr/selectableItemBackgroundBorderless"
-                            android:src="@android:drawable/ic_menu_share"
-                            android:contentDescription="Share" />
-
-                        <ImageButton
-                            android:id="@+id/clearBtn"
-                            android:layout_width="40dp"
-                            android:layout_height="40dp"
-                            android:background="?android:attr/selectableItemBackgroundBorderless"
-                            android:src="@android:drawable/ic_menu_close_clear_cancel"
-                            android:contentDescription="Clear" />
-                    </LinearLayout>
-
-                    <View
-                        android:layout_width="match_parent"
-                        android:layout_height="1dp"
-                        android:background="@color/divider"
-                        android:layout_marginTop="8dp"
-                        android:layout_marginBottom="8dp" />
-
-                    <TextView
-                        android:id="@+id/resultText"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:minHeight="140dp"
-                        android:textSize="15sp"
-                        android:textColor="@color/textPrimary"
-                        android:textIsSelectable="true"
-                        android:lineSpacingExtra="3dp" />
-                </LinearLayout>
-
-                <View
-                    android:layout_width="match_parent"
-                    android:layout_height="24dp" />
-            </LinearLayout>
-        </ScrollView>
-    </LinearLayout>
-
-</FrameLayout>
+</LinearLayout>
