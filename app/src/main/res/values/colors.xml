@@ -1,13 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="primary">#3F51B5</color>
-    <color name="primaryDark">#303F9F</color>
+    <color name="primary">#4F46E5</color>
+    <color name="primaryDark">#3730A3</color>
     <color name="accent">#009688</color>
-    <color name="bg">#F7F7FA</color>
+    <color name="amber">#FFC107</color>
+    <color name="bg">#F5F6FA</color>
     <color name="cardBg">#FFFFFF</color>
-    <color name="textPrimary">#1A1A1A</color>
-    <color name="textSecondary">#666666</color>
-    <color name="divider">#E0E0E0</color>
-    <color name="cropOverlay">#80000000</color>
-    <color name="cropBorder">#FFEB3B</color>
+    <color name="textPrimary">#111827</color>
+    <color name="textSecondary">#6B7280</color>
+    <color name="divider">#E5E7EB</color>
+    <color name="lensBg">#0B0B0B</color>
+    <color name="lensCyan">#00E5FF</color>
 </resources>
