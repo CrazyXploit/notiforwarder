@@ -12,5 +12,5 @@ dependencyResolutionManagement {
         mavenCentral()
     }
 }
-rootProject.name = "ScreenshotOCR"
+rootProject.name = "NotiForwarder"
 include ':app'
