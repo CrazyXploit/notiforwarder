@@ -3,11 +3,11 @@ plugins {
 }
 
 android {
-    namespace 'com.example.screenshotocr'
+    namespace 'com.example.notiforwarder'
     compileSdk 33
 
     defaultConfig {
-        applicationId "com.example.screenshotocr"
+        applicationId "com.example.notiforwarder"
         minSdk 21
         targetSdk 33
         versionCode 1
