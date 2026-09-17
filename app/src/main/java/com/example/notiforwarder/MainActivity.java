@@ -7,8 +7,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.graphics.Rect;
-import android.graphics.RectF;
 import android.net.Uri;
 import android.os.Bundle;
 import android.view.View;
@@ -30,30 +28,27 @@ import java.io.InputStream;
 public class MainActivity extends Activity {
 
     private static final int PICK_IMAGE = 1;
+    private static final int CROP_IMAGE = 2;
 
     private ImageView preview;
-    private CropOverlayView cropOverlay;
     private TextView status, resultText, emptyHint;
     private ProgressBar progress;
-    private Button pickBtn, scanCropBtn, scanAllBtn;
+    private Button pickBtn, scanAllBtn;
     private TextRecognizer recognizer;
     private Bitmap currentBitmap;
-    private int imageViewW, imageViewH;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        preview      = findViewById(R.id.preview);
-        cropOverlay  = findViewById(R.id.cropOverlay);
-        status       = findViewById(R.id.status);
-        resultText   = findViewById(R.id.resultText);
-        emptyHint    = findViewById(R.id.emptyHint);
-        progress     = findViewById(R.id.progress);
-        pickBtn      = findViewById(R.id.pickBtn);
-        scanCropBtn  = findViewById(R.id.scanCropBtn);
-        scanAllBtn   = findViewById(R.id.scanAllBtn);
+        preview     = findViewById(R.id.preview);
+        status      = findViewById(R.id.status);
+        resultText  = findViewById(R.id.resultText);
+        emptyHint   = findViewById(R.id.emptyHint);
+        progress    = findViewById(R.id.progress);
+        pickBtn     = findViewById(R.id.pickBtn);
+        scanAllBtn  = findViewById(R.id.scanAllBtn);
         ImageButton copyBtn  = findViewById(R.id.copyBtn);
         ImageButton shareBtn = findViewById(R.id.shareBtn);
         ImageButton clearBtn = findViewById(R.id.clearBtn);
@@ -66,19 +61,11 @@ public class MainActivity extends Activity {
             startActivityForResult(intent, PICK_IMAGE);
         });
 
-        scanCropBtn.setOnClickListener(v -> {
-            if (currentBitmap == null) return;
-            if (!cropOverlay.hasCrop()) {
-                Toast.makeText(this, "Drag on the image first", Toast.LENGTH_SHORT).show();
-                return;
-            }
-            Bitmap cropped = cropToBitmap();
-            if (cropped != null) runOcr(cropped);
-        });
-
         scanAllBtn.setOnClickListener(v -> {
-            if (currentBitmap == null) return;
-            runOcr(currentBitmap);
+            if (currentBitmap == null) { toast("Pick an image first"); return; }
+            Intent i = new Intent(this, CropActivity.class);
+            i.putExtra(CropActivity.EXTRA_IMAGE_URI, getLastUriString());
+            startActivityForResult(i, CROP_IMAGE);
         });
 
         copyBtn.setOnClickListener(v -> {
@@ -86,7 +73,7 @@ public class MainActivity extends Activity {
             if (t.isEmpty()) { toast("Nothing to copy"); return; }
             ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
             cm.setPrimaryClip(ClipData.newPlainText("OCR", t));
-            toast("Copied to clipboard");
+            toast("Copied");
         });
 
         shareBtn.setOnClickListener(v -> {
@@ -100,12 +87,14 @@ public class MainActivity extends Activity {
 
         clearBtn.setOnClickListener(v -> {
             resultText.setText("");
-            cropOverlay.clear();
             status.setText("Cleared");
         });
 
         handleShareIntent(getIntent());
     }
+
+    private String lastUri = "";
+    private String getLastUriString() { return lastUri; }
 
     @Override
     protected void onNewIntent(Intent intent) {
@@ -125,64 +114,44 @@ public class MainActivity extends Activity {
     protected void onActivityResult(int req, int res, Intent data) {
         super.onActivityResult(req, res, data);
         if (req == PICK_IMAGE && res == RESULT_OK && data != null && data.getData() != null) {
-            processUri(data.getData());
+            Uri uri = data.getData();
+            lastUri = uri.toString();
+            loadAndCrop(uri);
+        } else if (req == CROP_IMAGE) {
+            if (res == RESULT_OK) {
+                Bitmap cropped = CropActivity.CroppedHolder.bitmap;
+                CropActivity.CroppedHolder.bitmap = null;
+                if (cropped != null) {
+                    preview.setImageBitmap(cropped);
+                    emptyHint.setVisibility(View.GONE);
+                    runOcr(cropped);
+                }
+            }
         }
     }
 
-    private void processUri(Uri uri) {
+    private void loadAndCrop(Uri uri) {
         try {
             InputStream is = getContentResolver().openInputStream(uri);
-            Bitmap bmp = BitmapFactory.decodeStream(is);
+            currentBitmap = BitmapFactory.decodeStream(is);
             if (is != null) is.close();
-            if (bmp == null) { toast("Could not load image"); return; }
-
-            currentBitmap = bmp;
-            preview.setImageBitmap(bmp);
+            if (currentBitmap == null) { toast("Could not load image"); return; }
+            preview.setImageBitmap(currentBitmap);
             emptyHint.setVisibility(View.GONE);
-            cropOverlay.clear();
-            scanCropBtn.setEnabled(true);
             scanAllBtn.setEnabled(true);
-            status.setText("Image loaded. Drag to crop or tap Scan All.");
+
+            // Immediately open crop screen
+            Intent i = new Intent(this, CropActivity.class);
+            i.putExtra(CropActivity.EXTRA_IMAGE_URI, uri.toString());
+            startActivityForResult(i, CROP_IMAGE);
         } catch (Exception e) {
             toast("Error: " + e.getMessage());
         }
     }
 
-    private Bitmap cropToBitmap() {
-        if (currentBitmap == null) return null;
-        RectF crop = cropOverlay.getCropRect();
-        float viewW = cropOverlay.getWidth();
-        float viewH = cropOverlay.getHeight();
-
-        // Map crop rect from overlay (fitCenter preview) to bitmap coordinates
-        float bmpW = currentBitmap.getWidth();
-        float bmpH = currentBitmap.getHeight();
-
-        float scale = Math.min(viewW / bmpW, viewH / bmpH);
-        float dispW = bmpW * scale;
-        float dispH = bmpH * scale;
-        float offX = (viewW - dispW) / 2f;
-        float offY = (viewH - dispH) / 2f;
-
-        float left   = (crop.left   - offX) / scale;
-        float top    = (crop.top    - offY) / scale;
-        float right  = (crop.right  - offX) / scale;
-        float bottom = (crop.bottom - offY) / scale;
-
-        left   = Math.max(0, left);
-        top    = Math.max(0, top);
-        right  = Math.min(bmpW, right);
-        bottom = Math.min(bmpH, bottom);
-
-        int l = (int) left, t = (int) top;
-        int w = (int) (right - left), h = (int) (bottom - top);
-        if (w <= 0 || h <= 0) return null;
-
-        try {
-            return Bitmap.createBitmap(currentBitmap, l, t, w, h);
-        } catch (Exception e) {
-            return null;
-        }
+    private void processUri(Uri uri) {
+        lastUri = uri.toString();
+        loadAndCrop(uri);
     }
 
     private void runOcr(Bitmap bmp) {
