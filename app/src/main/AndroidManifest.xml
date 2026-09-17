@@ -22,7 +22,7 @@
         </activity>
 
         <activity
-            android:name=".CropActivity"
+            android:name=".LensActivity"
             android:exported="false"
             android:theme="@style/AppTheme" />
 
