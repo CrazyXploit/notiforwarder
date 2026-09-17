@@ -1,164 +1,140 @@
 package com.example.notiforwarder;
 
-import android.Manifest;
 import android.app.Activity;
+import android.content.ClipData;
+import android.content.ClipboardManager;
+import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
-import android.content.pm.PackageManager;
-import android.os.Build;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.net.Uri;
 import android.os.Bundle;
-import android.provider.Settings;
-import android.text.TextUtils;
-import android.view.View;
 import android.widget.Button;
-import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import java.io.BufferedReader;
+import com.google.mlkit.vision.common.InputImage;
+import com.google.mlkit.vision.text.Text;
+import com.google.mlkit.vision.text.TextRecognition;
+import com.google.mlkit.vision.text.TextRecognizer;
+import com.google.mlkit.vision.text.latin.TextRecognizerOptions;
+
 import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.net.URLEncoder;
 
 public class MainActivity extends Activity {
 
-    private EditText botTokenInput, chatIdInput;
-    private TextView statusText;
-    private SharedPreferences prefs;
+    private static final int PICK_IMAGE = 1;
+
+    private ImageView preview;
+    private TextView status, resultText;
+    private TextRecognizer recognizer;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        if (Build.VERSION.SDK_INT >= 33) {
-            if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)
-                    != PackageManager.PERMISSION_GRANTED) {
-                requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 1);
-            }
-        }
+        preview    = findViewById(R.id.preview);
+        status     = findViewById(R.id.status);
+        resultText = findViewById(R.id.resultText);
+        Button pickBtn  = findViewById(R.id.pickBtn);
+        Button copyBtn  = findViewById(R.id.copyBtn);
+        Button shareBtn = findViewById(R.id.shareBtn);
 
-        prefs = getSharedPreferences("settings", MODE_PRIVATE);
+        recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS);
 
-        botTokenInput = findViewById(R.id.botToken);
-        chatIdInput   = findViewById(R.id.chatId);
-        statusText    = findViewById(R.id.statusText);
-        Button saveBtn       = findViewById(R.id.saveBtn);
-        Button permissionBtn = findViewById(R.id.permissionBtn);
-        Button testBtn       = findViewById(R.id.testBtn);
-
-        botTokenInput.setText(prefs.getString("bot_token", ""));
-        chatIdInput.setText(prefs.getString("chat_id", ""));
-
-        saveBtn.setOnClickListener(new View.OnClickListener() {
-            @Override public void onClick(View v) {
-                String token = botTokenInput.getText().toString().trim();
-                String chat  = chatIdInput.getText().toString().trim();
-                if (TextUtils.isEmpty(token) || TextUtils.isEmpty(chat)) {
-                    Toast.makeText(MainActivity.this, "Fill both fields", Toast.LENGTH_SHORT).show();
-                    return;
-                }
-                prefs.edit().putString("bot_token", token)
-                            .putString("chat_id", chat).apply();
-                Toast.makeText(MainActivity.this, "Saved", Toast.LENGTH_SHORT).show();
-            }
+        pickBtn.setOnClickListener(v -> {
+            Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+            intent.setType("image/*");
+            startActivityForResult(intent, PICK_IMAGE);
         });
 
-        permissionBtn.setOnClickListener(new View.OnClickListener() {
-            @Override public void onClick(View v) {
-                try {
-                    startActivity(new Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS));
-                } catch (Exception e) {
-                    Toast.makeText(MainActivity.this,
-                        "Open Settings > Notification access manually",
-                        Toast.LENGTH_LONG).show();
-                }
+        copyBtn.setOnClickListener(v -> {
+            String text = resultText.getText().toString();
+            if (text.isEmpty()) {
+                Toast.makeText(this, "Nothing to copy", Toast.LENGTH_SHORT).show();
+                return;
             }
+            ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+            cm.setPrimaryClip(ClipData.newPlainText("OCR", text));
+            Toast.makeText(this, "Copied", Toast.LENGTH_SHORT).show();
         });
 
-        testBtn.setOnClickListener(new View.OnClickListener() {
-            @Override public void onClick(View v) {
-                sendTest();
+        shareBtn.setOnClickListener(v -> {
+            String text = resultText.getText().toString();
+            if (text.isEmpty()) {
+                Toast.makeText(this, "Nothing to share", Toast.LENGTH_SHORT).show();
+                return;
             }
+            Intent share = new Intent(Intent.ACTION_SEND);
+            share.setType("text/plain");
+            share.putExtra(Intent.EXTRA_TEXT, text);
+            startActivity(Intent.createChooser(share, "Share OCR text"));
         });
+
+        handleShareIntent(getIntent());
     }
 
     @Override
-    protected void onResume() {
-        super.onResume();
-        updateStatus();
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        handleShareIntent(intent);
     }
 
-    private void updateStatus() {
-        boolean enabled = isNotificationAccessEnabled();
-        statusText.setText(enabled
-            ? "Status: Notification access GRANTED"
-            : "Status: Grant notification access below");
+    private void handleShareIntent(Intent intent) {
+        if (intent != null && Intent.ACTION_SEND.equals(intent.getAction())
+                && "image/*".equals(intent.getType())) {
+            Uri imageUri = intent.getParcelableExtra(Intent.EXTRA_STREAM);
+            if (imageUri != null) processUri(imageUri);
+        }
     }
 
-    private boolean isNotificationAccessEnabled() {
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == PICK_IMAGE && resultCode == RESULT_OK
+                && data != null && data.getData() != null) {
+            processUri(data.getData());
+        }
+    }
+
+    private void processUri(Uri uri) {
         try {
-            String flat = Settings.Secure.getString(getContentResolver(),
-                    "enabled_notification_listeners");
-            return flat != null && flat.contains(getPackageName());
-        } catch (Exception e) {
-            return false;
-        }
-    }
-
-    private void sendTest() {
-        final String token = prefs.getString("bot_token", "");
-        final String chat  = prefs.getString("chat_id", "");
-        if (TextUtils.isEmpty(token) || TextUtils.isEmpty(chat)) {
-            Toast.makeText(this, "Save settings first", Toast.LENGTH_SHORT).show();
-            return;
-        }
-        new Thread(new Runnable() {
-            @Override public void run() {
-                final String result = telegramSend(token, chat, "Test from NotiForwarder");
-                runOnUiThread(new Runnable() {
-                    @Override public void run() {
-                        Toast.makeText(MainActivity.this, result, Toast.LENGTH_LONG).show();
-                    }
-                });
+            InputStream is = getContentResolver().openInputStream(uri);
+            Bitmap bitmap = BitmapFactory.decodeStream(is);
+            if (is != null) is.close();
+            if (bitmap == null) {
+                status.setText("Could not load image");
+                return;
             }
-        }).start();
-    }
-
-    static String telegramSend(String token, String chatId, String message) {
-        try {
-            String urlStr = "https://api.telegram.org/bot" + token + "/sendMessage";
-            URL url = new URL(urlStr);
-            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-            conn.setConnectTimeout(10000);
-            conn.setReadTimeout(10000);
-            conn.setRequestMethod("POST");
-            conn.setDoOutput(true);
-            conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
-
-            String postData = "chat_id=" + URLEncoder.encode(chatId, "UTF-8") +
-                              "&text=" + URLEncoder.encode(message, "UTF-8");
-
-            OutputStream os = conn.getOutputStream();
-            os.write(postData.getBytes("UTF-8"));
-            os.close();
-
-            int code = conn.getResponseCode();
-            InputStream is = (code >= 200 && code < 300)
-                    ? conn.getInputStream() : conn.getErrorStream();
-            BufferedReader br = new BufferedReader(new InputStreamReader(is));
-            StringBuilder sb = new StringBuilder();
-            String line;
-            while ((line = br.readLine()) != null) sb.append(line);
-            br.close();
-            conn.disconnect();
-
-            return "HTTP " + code + ": " + sb.toString();
+            preview.setImageBitmap(bitmap);
+            status.setText("Reading text...");
+            resultText.setText("");
+            runOcr(bitmap);
         } catch (Exception e) {
-            return "Error: " + e.getMessage();
+            status.setText("Error: " + e.getMessage());
         }
     }
-  }
+
+    private void runOcr(Bitmap bitmap) {
+        InputImage image = InputImage.fromBitmap(bitmap, 0);
+        recognizer.process(image)
+            .addOnSuccessListener(this::onOcrSuccess)
+            .addOnFailureListener(e -> status.setText("Failed: " + e.getMessage()));
+    }
+
+    private void onOcrSuccess(Text visionText) {
+        StringBuilder sb = new StringBuilder();
+        for (Text.TextBlock block : visionText.getTextBlocks()) {
+            for (Text.Line line : block.getLines()) {
+                sb.append(line.getText()).append("\n");
+            }
+            sb.append("\n");
+        }
+        String out = sb.toString().trim();
+        resultText.setText(out.isEmpty() ? "(No text found)" : out);
+        int lines = out.isEmpty() ? 0 : out.split("\n").length;
+        status.setText("Done. " + lines + " lines");
+    }
+}
