@@ -1,6 +1,7 @@
 package com.example.notiforwarder;
 
 import android.app.Activity;
+import android.animation.ObjectAnimator;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
@@ -12,6 +13,7 @@ import android.graphics.RectF;
 import android.net.Uri;
 import android.os.Bundle;
 import android.view.View;
+import android.view.animation.DecelerateInterpolator;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -37,10 +39,10 @@ public class LensActivity extends Activity {
     private TextLensView overlay;
     private ProgressBar progress;
     private LinearLayout bottomSheet;
-    private TextView selectedText, hint;
+    private TextView selectedText, hint, sheetCount;
+    private Button copySelBtn, shareSelBtn, copyAllBtn;
     private TextRecognizer recognizer;
     private Bitmap bitmap;
-    private List<TextLensView.TextLineBox> boxes = new ArrayList<>();
     private String currentSelection = "";
 
     @Override
@@ -53,36 +55,38 @@ public class LensActivity extends Activity {
         progress    = findViewById(R.id.lensProgress);
         bottomSheet = findViewById(R.id.bottomSheet);
         selectedText = findViewById(R.id.selectedText);
+        sheetCount  = findViewById(R.id.sheetCount);
         hint        = findViewById(R.id.lensHint);
-        Button backBtn      = findViewById(R.id.backBtn);
-        Button copySelBtn   = findViewById(R.id.copySelBtn);
-        Button shareSelBtn  = findViewById(R.id.shareSelBtn);
-        Button copyAllBtn   = findViewById(R.id.copyAllBtn);
+        Button backBtn     = findViewById(R.id.backBtn);
+        copySelBtn         = findViewById(R.id.copySelBtn);
+        shareSelBtn        = findViewById(R.id.shareSelBtn);
+        copyAllBtn         = findViewById(R.id.copyAllBtn);
 
         recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS);
 
-        overlay.setOnTextSelectedListener(new TextLensView.OnTextSelectedListener() {
-            @Override public void onSelected(String text) {
+        overlay.setListener(new TextLensView.OnSelectionChangedListener() {
+            @Override public void onSelectionChanged(String text, int lineCount) {
                 currentSelection = text;
-                bottomSheet.setVisibility(View.VISIBLE);
                 selectedText.setText(text);
+                sheetCount.setText(lineCount + (lineCount == 1 ? " line" : " lines") + " selected");
+                showSheet(true);
             }
-            @Override public void onCleared() {
+            @Override public void onSelectionCleared() {
                 currentSelection = "";
-                bottomSheet.setVisibility(View.GONE);
+                showSheet(false);
             }
         });
 
         backBtn.setOnClickListener(v -> finish());
 
         copySelBtn.setOnClickListener(v -> {
-            if (currentSelection.isEmpty()) { toast("Nothing selected"); return; }
+            if (currentSelection.isEmpty()) { toast("Select some text first"); return; }
             copyToClipboard(currentSelection);
-            toast("Copied selection");
+            toast("Copied " + currentSelection.length() + " chars");
         });
 
         shareSelBtn.setOnClickListener(v -> {
-            if (currentSelection.isEmpty()) { toast("Nothing selected"); return; }
+            if (currentSelection.isEmpty()) { toast("Select some text first"); return; }
             shareText(currentSelection);
         });
 
@@ -90,10 +94,9 @@ public class LensActivity extends Activity {
             String all = overlay.getAllText();
             if (all.isEmpty()) { toast("No text detected"); return; }
             copyToClipboard(all);
-            toast("Copied all text");
+            toast("Copied all");
         });
 
-        // Load image
         String uriStr = getIntent().getStringExtra(EXTRA_IMAGE_URI);
         if (uriStr != null) {
             try {
@@ -104,6 +107,8 @@ public class LensActivity extends Activity {
                 if (bitmap != null) {
                     lensImage.setImageBitmap(bitmap);
                     runOcr();
+                } else {
+                    toast("Could not load image");
                 }
             } catch (Exception e) {
                 toast("Load failed: " + e.getMessage());
@@ -125,39 +130,35 @@ public class LensActivity extends Activity {
 
     private void onOcrSuccess(Text visionText) {
         progress.setVisibility(View.GONE);
-        boxes.clear();
 
-        // Wait for layout so we know the actual displayed image bounds
         lensImage.post(() -> {
-            float[] bounds = getDisplayedImageBounds();
-            float offsetX = bounds[0], offsetY = bounds[1];
-            float scale   = bounds[2];
+            float[] b = getDisplayedImageBounds();
+            float offX = b[0], offY = b[1], scale = b[2];
 
+            List<TextLensView.TextLineBox> boxes = new ArrayList<>();
+            int idx = 0;
             for (Text.TextBlock block : visionText.getTextBlocks()) {
                 for (Text.Line line : block.getLines()) {
                     Rect r = line.getBoundingBox();
                     if (r == null) continue;
                     RectF mapped = new RectF(
-                        r.left   * scale + offsetX,
-                        r.top    * scale + offsetY,
-                        r.right  * scale + offsetX,
-                        r.bottom * scale + offsetY
-                    );
-                    boxes.add(new TextLensView.TextLineBox(mapped, line.getText()));
+                            r.left   * scale + offX,
+                            r.top    * scale + offY,
+                            r.right  * scale + offX,
+                            r.bottom * scale + offY);
+                    boxes.add(new TextLensView.TextLineBox(mapped, line.getText(), idx++));
                 }
             }
 
             overlay.setBoxes(boxes);
+            overlay.sortReadingOrder();
+
             hint.setText(boxes.isEmpty()
-                ? "No text detected"
-                : boxes.size() + " text regions • tap any to select");
+                    ? "No text detected"
+                    : boxes.size() + " regions • drag across lines to select");
         });
     }
 
-    /**
-     * Returns [offsetX, offsetY, scale] mapping bitmap pixel coords
-     * to view coords of the ImageView with scaleType=fitCenter.
-     */
     private float[] getDisplayedImageBounds() {
         int viewW = lensImage.getWidth();
         int viewH = lensImage.getHeight();
@@ -169,6 +170,33 @@ public class LensActivity extends Activity {
         float offX  = (viewW - dispW) / 2f;
         float offY  = (viewH - dispH) / 2f;
         return new float[]{offX, offY, scale};
+    }
+
+    private boolean sheetVisible = false;
+
+    private void showSheet(boolean show) {
+        if (show == sheetVisible) return;
+        sheetVisible = show;
+        if (show) {
+            bottomSheet.setVisibility(View.VISIBLE);
+            bottomSheet.setTranslationY(bottomSheet.getHeight());
+            bottomSheet.post(() -> {
+                ObjectAnimator anim = ObjectAnimator.ofFloat(
+                        bottomSheet, "translationY", bottomSheet.getHeight(), 0f);
+                anim.setDuration(220);
+                anim.setInterpolator(new DecelerateInterpolator());
+                anim.start();
+            });
+        } else {
+            ObjectAnimator anim = ObjectAnimator.ofFloat(
+                    bottomSheet, "translationY", 0f, bottomSheet.getHeight());
+            anim.setDuration(180);
+            anim.setInterpolator(new DecelerateInterpolator());
+            anim.start();
+            bottomSheet.postDelayed(() -> {
+                if (!sheetVisible) bottomSheet.setVisibility(View.GONE);
+            }, 200);
+        }
     }
 
     private void copyToClipboard(String t) {
