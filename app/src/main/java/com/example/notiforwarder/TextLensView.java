@@ -47,19 +47,19 @@ public class TextLensView extends View {
     public TextLensView(Context c, AttributeSet a, int d) { super(c, a, d); init(); }
 
     private void init() {
-        idlePaint.setColor(0xFF00E5FF);
-        idlePaint.setStyle(Paint.Style.STROKE);
-        idlePaint.setStrokeWidth(3f);
+    idlePaint.setColor(0x9900E5FF);
+    idlePaint.setStyle(Paint.Style.STROKE);
+    idlePaint.setStrokeWidth(2f);
 
-        selectedPaint.setColor(0xFFFFC107);
-        selectedPaint.setStyle(Paint.Style.STROKE);
-        selectedPaint.setStrokeWidth(6f);
+    selectedPaint.setColor(0xFFFFC107);
+    selectedPaint.setStyle(Paint.Style.STROKE);
+    selectedPaint.setStrokeWidth(5f);
 
-        selFill.setColor(0x55FFC107);
-        selFill.setStyle(Paint.Style.FILL);
+    selFill.setColor(0x44FFC107);
+    selFill.setStyle(Paint.Style.FILL);
 
-        setLayerType(LAYER_TYPE_SOFTWARE, null);
-    }
+    setLayerType(LAYER_TYPE_SOFTWARE, null);
+}
 
     public void setListener(OnSelectionChangedListener l) { listener = l; }
 
