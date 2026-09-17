@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#0B0B0B">
+    android:background="@color/lensBg">
 
     <ImageView
         android:id="@+id/lensImage"
@@ -23,51 +24,64 @@
         android:layout_gravity="center"
         android:visibility="gone" />
 
-    <!-- Top hint chip -->
-    <TextView
-        android:id="@+id/lensHint"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="top|center_horizontal"
-        android:layout_marginTop="72dp"
-        android:background="#CC1A1A1A"
-        android:paddingHorizontal="18dp"
-        android:paddingVertical="10dp"
-        android:text="Tap or drag across text to select"
-        android:textColor="#FFFFFF"
-        android:textSize="13sp" />
-
-    <!-- Top bar -->
+    <!-- Top app bar (transparent over image) -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_gravity="top"
         android:orientation="horizontal"
-        android:padding="16dp"
         android:gravity="center_vertical"
+        android:paddingStart="12dp"
+        android:paddingEnd="12dp"
+        android:paddingTop="14dp"
+        android:paddingBottom="14dp"
         android:background="#66000000">
 
-        <Button
+        <ImageButton
             android:id="@+id/backBtn"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Back"
-            android:backgroundTint="#CC000000"
-            android:textColor="#FFFFFF" />
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="?android:attr/selectableItemBackgroundBorderless"
+            android:src="@android:drawable/ic_menu_close_clear_cancel"
+            android:tint="#FFFFFF"
+            android:contentDescription="Close" />
 
-        <Space
+        <TextView
             android:layout_width="0dp"
-            android:layout_height="1dp"
-            android:layout_weight="1" />
-
-        <Button
-            android:id="@+id/copyAllBtn"
-            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="8dp"
+            android:text="Lens"
+            android:textColor="#FFFFFF"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/copyAllBtn"
+            style="@style/Widget.MaterialComponents.Button.TextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="40dp"
             android:text="Copy All"
-            android:backgroundTint="#009688"
-            android:textColor="#FFFFFF" />
+            android:textColor="#FFFFFF"
+            android:textSize="13sp" />
     </LinearLayout>
+
+    <!-- Floating hint chip -->
+    <TextView
+        android:id="@+id/lensHint"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|center_horizontal"
+        android:layout_marginTop="76dp"
+        android:background="#CC1F1F1F"
+        android:paddingStart="18dp"
+        android:paddingEnd="18dp"
+        android:paddingTop="10dp"
+        android:paddingBottom="10dp"
+        android:text="Drag across text to select"
+        android:textColor="#FFFFFF"
+        android:textSize="13sp"
+        android:elevation="6dp" />
 
     <!-- Bottom sheet -->
     <LinearLayout
@@ -76,37 +90,36 @@
         android:layout_height="wrap_content"
         android:layout_gravity="bottom"
         android:orientation="vertical"
-        android:background="#FFFFFF"
+        android:background="@color/cardBg"
         android:paddingStart="20dp"
         android:paddingEnd="20dp"
-        android:paddingTop="12dp"
-        android:paddingBottom="20dp"
+        android:paddingTop="10dp"
+        android:paddingBottom="24dp"
         android:visibility="gone"
-        android:elevation="20dp">
+        android:elevation="24dp">
 
-        <!-- Drag handle -->
         <View
             android:layout_width="40dp"
             android:layout_height="4dp"
             android:layout_gravity="center_horizontal"
-            android:background="#DDDDDD" />
+            android:background="#D1D5DB" />
 
         <TextView
             android:id="@+id/sheetCount"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="14dp"
+            android:layout_marginTop="16dp"
             android:text="0 lines selected"
-            android:textColor="#666666"
+            android:textColor="@color/textSecondary"
             android:textSize="11sp"
             android:textAllCaps="true"
-            android:letterSpacing="0.1" />
+            android:letterSpacing="0.12" />
 
         <ScrollView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:maxHeight="180dp"
-            android:layout_marginTop="6dp">
+            android:layout_marginTop="8dp">
 
             <TextView
                 android:id="@+id/selectedText"
@@ -114,34 +127,33 @@
                 android:layout_height="wrap_content"
                 android:textSize="16sp"
                 android:lineSpacingExtra="4dp"
-                android:textColor="#111111"
-                android:fontFamily="monospace" />
+                android:textColor="@color/textPrimary" />
         </ScrollView>
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:layout_marginTop="14dp">
+            android:layout_marginTop="16dp">
 
-            <Button
+            <com.google.android.material.button.MaterialButton
                 android:id="@+id/copySelBtn"
                 android:layout_width="0dp"
-                android:layout_height="48dp"
+                android:layout_height="52dp"
                 android:layout_weight="1"
-                android:backgroundTint="#3F51B5"
-                android:textColor="#FFFFFF"
-                android:text="Copy" />
+                android:text="Copy"
+                app:cornerRadius="26dp"
+                app:backgroundTint="@color/primary" />
 
-            <Button
+            <com.google.android.material.button.MaterialButton
                 android:id="@+id/shareSelBtn"
                 android:layout_width="0dp"
-                android:layout_height="48dp"
+                android:layout_height="52dp"
                 android:layout_weight="1"
-                android:layout_marginStart="8dp"
-                android:backgroundTint="#009688"
-                android:textColor="#FFFFFF"
-                android:text="Share" />
+                android:layout_marginStart="10dp"
+                android:text="Share"
+                app:cornerRadius="26dp"
+                app:backgroundTint="@color/accent" />
         </LinearLayout>
     </LinearLayout>
 
